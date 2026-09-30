@@ -102,6 +102,20 @@ export async function POST(request: Request) {
   }
 
   const patientId = created.user.id;
+  // 트리거 실행 시점에는 app_metadata가 비어 있어 기본값(승인 대기)으로 만들어진다.
+  // 역할·상태·로그인 아이디는 service role로 여기서 확정한다.
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ role: "patient", status: "active", name: body.name, login_id: body.loginId, birth_year: body.birthYear })
+    .eq("id", patientId);
+  if (profileError) {
+    await admin.auth.admin.deleteUser(patientId);
+    return NextResponse.json(
+      { error: profileError.code === "23505" ? "이미 사용 중인 로그인 아이디입니다." : "환자 계정을 생성하지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { status: profileError.code === "23505" ? 409 : 500 },
+    );
+  }
+
   const { error: linkError } = await admin.from("therapist_patient_links").insert({
     therapist_id: user.id,
     patient_id: patientId,

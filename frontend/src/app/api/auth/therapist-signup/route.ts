@@ -54,6 +54,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // 트리거 실행 시점에는 app_metadata가 비어 있어 기본값(승인 대기)으로 만들어진다.
+    // 역할은 service role로 여기서 확정한다.
+    const { error: profileError } = await admin
+      .from("profiles")
+      .update({ role: "therapist", status: "pending", name, organization, credential })
+      .eq("id", data.user.id);
+    if (profileError) {
+      await admin.auth.admin.deleteUser(data.user.id);
+      return NextResponse.json({ error: "가입 신청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요." }, { status: 500 });
+    }
+
     return NextResponse.json({ id: data.user.id }, { status: 201 });
   } catch {
     return NextResponse.json(
