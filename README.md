@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 말잇다(MALIT)
 
-## Getting Started
+성인 실어증 환자를 위한 단계적 문장 산출 훈련 웹 애플리케이션입니다.
 
-First, run the development server:
+## 프로젝트 구조
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```text
+MALIT/
+├─ frontend/   # Next.js 웹 앱과 서버 API
+├─ supabase/   # 데이터베이스 마이그레이션
+├─ docs/       # 기획·데이터·콘텐츠 문서
+└─ scripts/    # 프로젝트 공용 관리 스크립트
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+현재 백엔드 API는 별도 서버가 아니라 `frontend/src/app/api`의 Next.js Route Handler로 구성합니다. 독립적인 음성 처리 서버나 배치 서버가 필요해질 때 `backend/`를 추가합니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 웹 앱 실행
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Learn More
+브라우저에서 `http://localhost:3000`으로 접속합니다. 자세한 설정은 [프론트엔드 안내](frontend/README.md)를 확인합니다.
 
-To learn more about Next.js, take a look at the following resources:
+## 주요 문서
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [프로젝트 기획](docs/PROJECT_PLAN.md)
+- [개발 인수인계](docs/CLAUDE_CODE_HANDOFF.md)
+- [배포 안내](docs/DEPLOYMENT.md)
+- [데이터 정의](docs/DATA_DEFINITION_DRAFT.md)
+- [훈련 콘텐츠 검토](docs/TRAINING_CONTENT_AUDIT.md)
+- [훈련 이미지 기준](docs/TRAINING_IMAGES_MVP.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 데이터베이스
 
-## Deploy on Vercel
+Supabase SQL 파일은 `supabase/migrations/`에서 실행 순서대로 관리합니다. 이미 적용한 마이그레이션은 수정하지 않고, 변경이 필요하면 새로운 마이그레이션 파일을 추가합니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
