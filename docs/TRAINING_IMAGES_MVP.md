@@ -1,4 +1,4 @@
-# MALIT MVP 훈련 이미지
+# MALIUM MVP 훈련 이미지
 
 ## 저장 위치
 

@@ -1,4 +1,4 @@
-# MALIT 배포 안내 (Vercel + 운영 Supabase)
+# MALIUM 배포 안내 (Vercel + 운영 Supabase)
 
 > 작성일: 2026-09-30
 > 기준: D1 구현 완료 시점
@@ -108,6 +108,10 @@ select count(*) from public.training_contents where status = 'published';
 5. **Deploy**
 
 환경변수를 나중에 바꾸면 **Deployments → 최신 배포 → Redeploy**를 해야 반영된다.
+
+### 운영 주소
+
+운영 주소는 `https://malium.vercel.app`이다. Vercel 프로젝트 **Settings → Domains**에서 지정하며, 주소를 바꾸면 Supabase **Authentication → URL Configuration**의 Site URL과 Redirect URLs도 같은 주소로 맞춘다.
 
 ## 7. 배포 후 확인
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "말잇다 | MALIT",
+  title: "말이음 | MALIUM",
   description: "성인 실어증 환자를 위한 단계적 문장 산출 훈련",
 };
 

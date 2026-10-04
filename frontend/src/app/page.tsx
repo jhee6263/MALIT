@@ -62,13 +62,13 @@ export default function LoginPage() {
         return;
       }
 
-      sessionStorage.setItem("malit-user-name", profile.name);
+      sessionStorage.setItem("malium-user-name", profile.name);
       router.replace(profile.role === "admin" ? "/admin" : profile.role === "therapist" ? "/therapist" : "/patient/today");
       router.refresh();
       return;
     }
 
-    sessionStorage.setItem("malit-demo-user", account);
+    sessionStorage.setItem("malium-demo-user", account);
     router.push(account === "재활사" ? "/therapist" : account === "관리자" ? "/admin" : "/patient/today");
   }
 

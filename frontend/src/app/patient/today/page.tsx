@@ -17,12 +17,9 @@ export default async function TodayPage() {
       <PatientHeader />
       <main className="container flex flex-1 items-center justify-center py-10">
         <section className="w-full max-w-[620px]">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold sm:text-4xl">
-              {profileResult.data?.name ? `${profileResult.data.name}님` : "오늘의 훈련"}
-            </h1>
-            <p className="mt-3 text-lg text-[#6a736f]">오늘 준비된 훈련을 확인해보세요.</p>
-          </div>
+          <h1 className="text-3xl font-bold sm:text-4xl">
+            {profileResult.data?.name ? `${profileResult.data.name}님` : "오늘의 훈련"}
+          </h1>
           <TodayTrainingCard />
         </section>
       </main>

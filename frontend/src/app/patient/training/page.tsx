@@ -88,7 +88,7 @@ export default function TrainingPage() {
         setItems(planBody.items);
         setSessionId(sessionBody.id);
         setCurrentItemIndex(Math.min(sessionBody.sentence_count ?? 0, Math.max(planBody.items.length - 1, 0)));
-        const savedSource = window.sessionStorage.getItem(`malit-verification-${sessionBody.id}`);
+        const savedSource = window.sessionStorage.getItem(`malium-verification-${sessionBody.id}`);
         if (savedSource === "self" || savedSource === "companion" || savedSource === "therapist") {
           setVerificationSource(savedSource);
         }
@@ -137,7 +137,7 @@ export default function TrainingPage() {
 
   function chooseVerificationSource(source: VerificationSource) {
     setVerificationSource(source);
-    window.sessionStorage.setItem(`malit-verification-${sessionId}`, source);
+    window.sessionStorage.setItem(`malium-verification-${sessionId}`, source);
   }
 
   async function saveAttempt({
