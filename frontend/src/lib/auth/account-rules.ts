@@ -13,3 +13,11 @@ export function isValidPatientLoginId(value: string) {
 export function toPatientInternalEmail(loginId: string) {
   return `${normalizePatientLoginId(loginId)}@${PATIENT_EMAIL_DOMAIN}`;
 }
+
+// 로그인 화면에 공개하는 확인용 계정. 확인용 환자는 같은 날에도 훈련을 여러 번 할 수 있다.
+export const DEMO_THERAPIST_EMAIL = "therapist01@malium.com";
+export const DEMO_PATIENT_LOGIN_ID = "patient01";
+
+export function isDemoPatientEmail(email?: string | null) {
+  return email === toPatientInternalEmail(DEMO_PATIENT_LOGIN_ID);
+}

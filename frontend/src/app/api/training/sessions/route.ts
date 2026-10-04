@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isDemoPatientEmail } from "@/lib/auth/account-rules";
 import { createClient } from "@/lib/supabase/server";
 
 const createSchema = z.object({ planId: z.string().uuid() });
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   if (existingError) return NextResponse.json({ error: "진행 중인 훈련을 확인하지 못했습니다." }, { status: 500 });
   if (existing) return NextResponse.json({ ...existing, resumed: true });
 
-  // 오늘 계획을 이미 마쳤으면 같은 문장으로 새 세션을 만들지 않는다.
+  // 오늘 계획을 이미 마쳤으면 같은 문장으로 새 세션을 만들지 않는다. 확인용 환자는 다시 체험할 수 있다.
   const { data: completed } = await supabase
     .from("training_sessions")
     .select("id")
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     .not("completed_at", "is", null)
     .limit(1)
     .maybeSingle();
-  if (completed) return NextResponse.json({ error: "오늘 연습을 이미 마쳤어요. 내일 새 문장으로 만나요." }, { status: 409 });
+  if (completed && !isDemoPatientEmail(user.email)) return NextResponse.json({ error: "오늘 연습을 이미 마쳤어요. 내일 새 문장으로 만나요." }, { status: 409 });
 
   const { data, error } = await supabase
     .from("training_sessions")

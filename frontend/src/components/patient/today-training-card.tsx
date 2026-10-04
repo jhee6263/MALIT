@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CalendarX2, LoaderCircle, Play, RefreshCw, Star } from "lucide-react";
+import { CalendarX2, LoaderCircle, Play, RefreshCw, RotateCcw, Star } from "lucide-react";
 import { EmptyState } from "@/components/portal/empty-state";
 
 type DailyPlanResponse = {
@@ -12,6 +12,7 @@ type DailyPlanResponse = {
   message?: string;
   error?: string;
   sessionStatus?: "completed" | "in_progress" | "not_started";
+  canReplay?: boolean;
 };
 
 export function TodayTrainingCard() {
@@ -70,6 +71,7 @@ function TodayTrainingBody({ loading, error, result, onRetry }: { loading: boole
           <p className="mt-3 break-keep text-lg text-[var(--muted)]">문장 {result.itemCount}개를 끝까지 연습했어요. 내일 다시 만나요 😊</p>
         </div>
         <Link className="btn btn-primary mt-8 w-full" href="/patient/result"><Star size={19} /> 오늘 결과 보기</Link>
+        {result.canReplay && <Link className="btn btn-secondary mt-3 w-full" href="/patient/training"><RotateCcw size={19} /> 처음부터 다시 체험하기</Link>}
       </>
     );
   }

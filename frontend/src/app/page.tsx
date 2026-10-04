@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, UserRound } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { Footer } from "@/components/footer";
-import { toPatientInternalEmail } from "@/lib/auth/account-rules";
+import { DEFAULT_TEST_PASSWORD, DEMO_PATIENT_LOGIN_ID, DEMO_THERAPIST_EMAIL, toPatientInternalEmail } from "@/lib/auth/account-rules";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -14,6 +14,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function fillDemoAccount(account: string) {
+    const form = formRef.current;
+    if (!form) return;
+    (form.elements.namedItem("account") as HTMLInputElement).value = account;
+    (form.elements.namedItem("password") as HTMLInputElement).value = DEFAULT_TEST_PASSWORD;
+    setError("");
+  }
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +90,7 @@ export default function LoginPage() {
             <h1 className="mt-9 text-2xl font-bold">안녕하세요.</h1>
             <p className="mt-2 text-lg text-[#69736f]">오늘도 천천히 시작해 볼까요?</p>
           </div>
-          <form onSubmit={login} className="space-y-5">
+          <form ref={formRef} onSubmit={login} className="space-y-5">
             <label className="block">
               <span className="mb-2 block font-bold">이메일 또는 로그인 아이디</span>
               <span className="relative block">
@@ -102,6 +111,22 @@ export default function LoginPage() {
             {error && <p role="alert" className="rounded-xl bg-[#fff3f3] p-3 text-sm font-bold text-[var(--danger)]">{error}</p>}
             <button className="btn btn-primary w-full" disabled={loading}>{loading ? "확인 중…" : "로그인"}</button>
           </form>
+          <div className="mt-6 rounded-2xl border border-[#e8ddcc] bg-white p-5 sm:-mx-12">
+            <p className="font-bold">확인용 계정 정보입니다</p>
+            <p className="mt-1 text-sm text-[#69736f]">계정을 누르면 입력칸에 채워져요.</p>
+            <div className="mt-4 space-y-2">
+              {[
+                { label: "환자", account: DEMO_PATIENT_LOGIN_ID },
+                { label: "재활사", account: DEMO_THERAPIST_EMAIL },
+              ].map((demo) => (
+                <button key={demo.account} type="button" onClick={() => fillDemoAccount(demo.account)} className="flex w-full items-center gap-3 rounded-xl bg-[#f8f6f1] px-4 py-3 text-left hover:bg-[#f0ebe0]">
+                  <span className="w-12 shrink-0 text-sm font-bold text-[var(--mint-700)]">{demo.label}</span>
+                  <span className="min-w-0 flex-1 break-all font-bold sm:whitespace-nowrap">{demo.account}</span>
+                  <span className="shrink-0 text-sm text-[#69736f]">{DEFAULT_TEST_PASSWORD}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm font-bold text-[var(--mint-700)]">
             <Link href="/?role=therapist">재활사 로그인</Link>
             <span>·</span>

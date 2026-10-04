@@ -417,6 +417,7 @@ session_id + content_id + step
 - 비율·임상 용어는 표시하지 않는다. 응원 문구는 혼자 해낸 비중에 따라 3종 중 하나를 쓴다.
 - 오늘 완료한 세션이 없으면 진행 중이면 "이어서 하기", 아니면 "오늘의 훈련으로"를 안내한다.
 - 완료 후 재시작 문제 수정: `/api/training/daily-plan`이 `sessionStatus`(`completed`/`in_progress`/`not_started`)를 돌려주고, 오늘의 훈련 카드는 완료 시 "오늘 결과 보기", 진행 중이면 "이어서 하기"를 보여준다. `/api/training/sessions` POST는 이미 완료한 계획이면 409로 새 세션 생성을 막는다.
+- 확인용 계정: 로그인 화면에 확인용 환자(`patient01`)와 재활사(`therapist01@malium.com`) 계정을 공개한다. 확인용 환자만 완료 후에도 "처음부터 다시 체험하기"로 같은 날 새 세션을 열 수 있다 (`isDemoPatientEmail`, `frontend/src/lib/auth/account-rules.ts`).
 
 ### 3단계 — 재활사 대시보드 실제 데이터 연결
 

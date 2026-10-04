@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ContentStatus, TrainingContent, TrainingLevel } from "@/lib/types";
+import { isDemoPatientEmail } from "@/lib/auth/account-rules";
 import { buildD1DailyPlan } from "@/lib/training/daily-plan";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -31,14 +32,15 @@ async function readPlanItems(admin: ReturnType<typeof createAdminClient>, planId
 }
 
 // 같은 날 계획으로 훈련을 다시 시작하지 않도록 오늘 세션 상태를 함께 알려준다.
+// 확인용 환자는 완료 후 새 세션을 열 수 있으므로 진행 중인 세션을 먼저 본다.
 async function readSessionStatus(admin: ReturnType<typeof createAdminClient>, patientId: string, planId: string) {
   const { data } = await admin
     .from("training_sessions")
     .select("completed_at")
     .eq("patient_id", patientId)
     .eq("plan_id", planId);
-  if (data?.some((session) => session.completed_at)) return "completed" as const;
-  return data?.length ? "in_progress" as const : "not_started" as const;
+  if (data?.some((session) => !session.completed_at)) return "in_progress" as const;
+  return data?.length ? "completed" as const : "not_started" as const;
 }
 
 export async function POST() {
@@ -59,6 +61,7 @@ export async function POST() {
 
   const admin = createAdminClient();
   const today = getKoreanToday();
+  const canReplay = isDemoPatientEmail(user.email);
   const { data: existingPlan, error: existingPlanError } = await admin
     .from("daily_plans")
     .select("id,reason")
@@ -77,6 +80,7 @@ export async function POST() {
         items: existingItems,
         reused: true,
         sessionStatus: await readSessionStatus(admin, user.id, existingPlan.id),
+        canReplay,
       });
     }
   }
@@ -204,7 +208,7 @@ export async function POST() {
 
   const existingItemsAfterCreate = await readPlanItems(admin, planId);
   if (existingItemsAfterCreate.length > 0) {
-    return NextResponse.json({ planId, itemCount: existingItemsAfterCreate.length, reason, items: existingItemsAfterCreate, reused: true, sessionStatus: await readSessionStatus(admin, user.id, planId) });
+    return NextResponse.json({ planId, itemCount: existingItemsAfterCreate.length, reason, items: existingItemsAfterCreate, reused: true, sessionStatus: await readSessionStatus(admin, user.id, planId), canReplay });
   }
 
   const { data: insertedItems, error: itemError } = await admin
@@ -220,7 +224,7 @@ export async function POST() {
   if (itemError) {
     const concurrentItems = await readPlanItems(admin, planId);
     if (concurrentItems.length > 0) {
-      return NextResponse.json({ planId, itemCount: concurrentItems.length, reason, items: concurrentItems, reused: true, sessionStatus: await readSessionStatus(admin, user.id, planId) });
+      return NextResponse.json({ planId, itemCount: concurrentItems.length, reason, items: concurrentItems, reused: true, sessionStatus: await readSessionStatus(admin, user.id, planId), canReplay });
     }
     return NextResponse.json({ error: "훈련 문장을 배정하지 못했습니다." }, { status: 500 });
   }
@@ -232,5 +236,6 @@ export async function POST() {
     items: insertedItems ?? [],
     reused: false,
     sessionStatus: "not_started",
+    canReplay,
   }, { status: 201 });
 }
