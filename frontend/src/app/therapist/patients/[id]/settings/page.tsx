@@ -17,6 +17,7 @@ export default function PatientSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [todayPlan, setTodayPlan] = useState<"regenerated" | "kept_started" | "none">("none");
   const [removedTopics, setRemovedTopics] = useState<string[]>([]);
   const dailyCountOptions = Array.from(new Set([6, 8, 10, Number(form.dailyCount)])).sort((a, b) => a - b);
 
@@ -65,6 +66,7 @@ export default function PatientSettingsPage() {
         return;
       }
       setRemovedTopics([]);
+      setTodayPlan(body.todayPlan ?? "none");
       setSaved(true);
     } catch {
       setError("훈련 설정을 저장하지 못했습니다. 네트워크를 확인해주세요.");
@@ -90,7 +92,7 @@ export default function PatientSettingsPage() {
 
       <section className="card mt-7 max-w-3xl p-7 sm:p-9">
         {error && <p role="alert" className="mb-5 rounded-xl bg-[#fff3f3] p-4 font-bold text-[var(--danger)]">{error}</p>}
-        {saved && <p role="status" className="mb-5 flex items-center gap-2 rounded-xl bg-[var(--mint-50)] p-4 font-bold text-[var(--mint-700)]"><CheckCircle2 size={20} /> 훈련 설정을 저장했습니다.</p>}
+        {saved && <p role="status" className="mb-5 flex items-center gap-2 rounded-xl bg-[var(--mint-50)] p-4 font-bold text-[var(--mint-700)]"><CheckCircle2 size={20} /> 훈련 설정을 저장했습니다.{todayPlan === "regenerated" && " 오늘 아직 시작하지 않은 훈련은 새 설정으로 다시 만들어집니다."}{todayPlan === "kept_started" && " 오늘은 이미 훈련을 시작해 지금 진행 중인 문장은 그대로 두고, 내일부터 새 설정이 적용됩니다."}</p>}
 
         <form onSubmit={saveSettings} className="grid gap-6 sm:grid-cols-2">
           <label>
@@ -124,7 +126,7 @@ export default function PatientSettingsPage() {
               <span className="mt-1 block text-sm leading-6 text-[var(--muted)]">환자 또는 보호자에게 안내하고 동의를 받은 경우에만 체크하세요. 말소리는 브라우저 제공사(예: Google)로 전송되어 글자로 바뀌며, 말이음은 음성 파일을 저장하지 않습니다. 인식 결과는 참고용이고 맞고 틀림은 사람이 확인합니다. 체크를 해제하면 지금처럼 직접 확인하는 화면이 나옵니다. 이 설정은 다음 훈련 시작부터 적용됩니다.</span>
             </span>
           </label>
-          <p className="sm:col-span-2 rounded-xl bg-[#fff9f3] p-4 text-sm leading-6 text-[#74553b]">변경한 설정은 다음에 새로 생성되는 훈련부터 적용됩니다. 이미 시작했거나 생성된 오늘의 훈련은 그대로 유지됩니다.</p>
+          <p className="sm:col-span-2 rounded-xl bg-[#fff9f3] p-4 text-sm leading-6 text-[#74553b]">단계·주제·하루 훈련량을 바꾸면, 오늘 환자가 아직 훈련을 시작하지 않았을 때는 오늘 훈련도 새 설정으로 다시 만들어집니다. 이미 시작한 훈련은 그대로 유지되고 내일부터 적용됩니다. 이미 열려 있는 환자 화면은 새로고침해야 바뀝니다.</p>
           <div className="flex flex-wrap justify-end gap-3 sm:col-span-2">
             <Link href="/therapist/patients" className="btn btn-secondary">취소</Link>
             <button disabled={saving} className="btn btn-primary"><Save size={18} /> {saving ? "저장 중…" : "설정 저장"}</button>

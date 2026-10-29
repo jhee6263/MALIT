@@ -223,7 +223,7 @@ export default function ContentEditPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold">핵심어</h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">그림을 보고 떠올릴 낱말입니다. 문장 순서대로 두세요. 도움 단서는 범주 → 의미 → 첫소리 순서로 한 단계씩 보여줍니다.</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">그림을 보고 떠올릴 낱말입니다. 문장 순서대로 두세요. 도움 단서는 범주 → 의미 → 첫소리 순서로 한 단계씩 보여주고, 모두 본 뒤에도 떠올리지 못하면 정답을 보여줘 따라 말하게 합니다.</p>
             </div>
             <button type="button" className="btn btn-secondary min-h-11" disabled={!nextRole} onClick={() => nextRole && (setSaved(false), setKeywords([...keywords, { role: nextRole, question: "", answer: "", hints: ["", "", ""] }]))}><Plus size={18} /> 핵심어 추가</button>
           </div>

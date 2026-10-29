@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getKstDateKey } from "@/lib/training/record-summary";
 
 const patientIdSchema = z.string().uuid();
 const settingsSchema = z.object({
@@ -105,7 +106,9 @@ export async function PATCH(
   }
 
   // 동의 상태가 바뀔 때만 동의 시각과 기록자를 새로 남긴다.
-  const { data: before } = await admin.from("learner_settings").select("voice_consent").eq("patient_id", id).maybeSingle();
+  const { data: before } = await admin.from("learner_settings").select("voice_consent,training_level,daily_count,topics").eq("patient_id", id).maybeSingle();
+  const sameTopics = (before?.topics ?? []).length === uniqueTopics.length && uniqueTopics.every((topic) => (before?.topics ?? []).includes(topic));
+  const planSettingsChanged = !before || before.training_level !== level || before.daily_count !== dailyCount || !sameTopics;
   const consentChanged = voiceConsent !== undefined && voiceConsent !== (before?.voice_consent ?? false);
   const now = new Date().toISOString();
 
@@ -146,5 +149,27 @@ export async function PATCH(
     },
   });
 
-  return NextResponse.json(data);
+  // 오늘 계획은 처음 열 때 한 번 만들어진다. 단계·주제·훈련량이 바뀌었고 환자가 아직 훈련을 시작하지 않았다면
+  // 오늘 계획을 지워 다음에 열 때 새 설정으로 다시 만든다. 이미 시작한 계획은 기록이 꼬이지 않게 그대로 둔다.
+  let todayPlan: "regenerated" | "kept_started" | "none" = "none";
+  if (planSettingsChanged) {
+    const { data: plan } = await admin
+      .from("daily_plans")
+      .select("id")
+      .eq("patient_id", id)
+      .eq("plan_date", getKstDateKey(new Date()))
+      .maybeSingle();
+    if (plan) {
+      const { count } = await admin.from("training_sessions").select("id", { count: "exact", head: true }).eq("plan_id", plan.id);
+      if (count && count > 0) {
+        todayPlan = "kept_started";
+      } else {
+        // 그 사이 환자가 훈련을 시작했다면 세션이 계획을 참조하므로 삭제가 거절되고, 이 경우도 그대로 둔 것으로 본다.
+        const { error: deleteError } = await admin.from("daily_plans").delete().eq("id", plan.id);
+        todayPlan = deleteError ? "kept_started" : "regenerated";
+      }
+    }
+  }
+
+  return NextResponse.json({ ...data, todayPlan });
 }

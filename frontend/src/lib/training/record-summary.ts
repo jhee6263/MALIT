@@ -41,7 +41,7 @@ export type Trial = {
   step: string;
   kind: StepKind;
   outcome: TrialOutcome;
-  /** 기회 안에서 사용한 가장 높은 도움 단계. 핵심어: 1 범주 · 2 의미 · 3 첫소리, 문장: 1 문장 도움 */
+  /** 기회 안에서 사용한 가장 높은 도움 단계. 핵심어: 1 범주 · 2 의미 · 3 첫소리 · 4 정답 제시, 문장: 1 문장 도움 */
   cueLevel: number;
   retryCount: number;
   grammarErrors: number;
@@ -60,7 +60,8 @@ export const SUMMARY_RULES = {
   overallTrendPoints: 10, // 전체 독립 수행 비율 변화 기준(%p)
   stepTrendPoints: 20, // 단계별 변화 기준(%p). 표본이 작아 더 보수적으로 본다.
   cueTrendLevels: 0.3,
-  maxKeywordCue: 3,
+  maxKeywordCue: 3, // 첫소리 단서까지 사용
+  answerShownCue: 4, // 정답을 보여준 뒤 따라 말함
   recentDays: 7, // 중단된 훈련·미훈련 판단 기간
 } as const;
 
@@ -247,7 +248,7 @@ export type PatientSummary = {
   headlineTone: "focus" | "strength" | "neutral";
   focusStep: string | null;
   sentence: { total: number; independent: number; rate: number };
-  keywordCue: { average: number | null; maxCueRate: number; total: number };
+  keywordCue: { average: number | null; maxCueRate: number; answerShownRate: number; total: number };
   recentChange: RecentChange;
   steps: StepStat[];
   insights: Insight[];
@@ -511,6 +512,7 @@ export function buildPatientSummary(
     keywordCue: {
       average: round1(averageKeywordCue(keywordTrials)),
       maxCueRate: percent(keywordTrials.filter((trial) => trial.cueLevel >= SUMMARY_RULES.maxKeywordCue).length, keywordTrials.length),
+      answerShownRate: percent(keywordTrials.filter((trial) => trial.cueLevel >= SUMMARY_RULES.answerShownCue).length, keywordTrials.length),
       total: keywordTrials.length,
     },
     recentChange,

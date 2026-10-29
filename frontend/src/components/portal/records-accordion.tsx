@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CalendarDays, CheckCircle2, ChevronDown, CircleAlert, Folder, HelpCircle, Info, Lightbulb, MessageSquareText, Minus, TrendingUp } from "lucide-react";
 import {
   getStepLabel,
+  SUMMARY_RULES,
   type AttemptRow,
   type DateSummary,
   type PatientSummary,
@@ -44,7 +45,7 @@ const kindLabels: Record<StepKind, string> = {
 };
 
 const kindDescriptions: Record<StepKind, string> = {
-  keyword: "도움 단계 1 범주 · 2 의미 · 3 첫소리",
+  keyword: "도움 단계 1 범주 · 2 의미 · 3 첫소리 · 4 정답 제시",
   grammar: "독립 = 첫 선택에서 정답",
   sentence: "독립 = 문장 도움 없이 한 번에 성공",
   other: "",
@@ -60,6 +61,7 @@ function getTimeLabel(value: string) {
 
 function getHelpLabel(record: TrainingRecord) {
   if (record.response_data?.usedSentenceHelp) return "문장 도움 사용";
+  if (record.step.startsWith("keyword:") && record.hint_level >= SUMMARY_RULES.answerShownCue) return "정답 제시 후 따라 말함";
   if (record.hint_level > 0) return `도움 ${record.hint_level}단계 사용`;
   return "도움 없음";
 }
@@ -232,8 +234,8 @@ function PatientOverview({ summary, agreement }: { summary: PatientSummary; agre
         />
         <SummaryCard
           label="핵심어 평균 도움 단계"
-          value={summary.keywordCue.average === null ? "기록 없음" : `${summary.keywordCue.average.toFixed(1)} / 3`}
-          description={summary.keywordCue.total ? `첫소리 단서까지 필요 ${summary.keywordCue.maxCueRate}% · 0은 도움 없음` : "핵심어 단계 기록이 없습니다"}
+          value={summary.keywordCue.average === null ? "기록 없음" : `${summary.keywordCue.average.toFixed(1)} / ${SUMMARY_RULES.answerShownCue}`}
+          description={summary.keywordCue.total ? `첫소리 단서까지 필요 ${summary.keywordCue.maxCueRate}% · 정답 제시 ${summary.keywordCue.answerShownRate}% · 0은 도움 없음` : "핵심어 단계 기록이 없습니다"}
         />
         <SummaryCard
           label="최근 변화"

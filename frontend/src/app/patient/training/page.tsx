@@ -395,12 +395,18 @@ export default function TrainingPage() {
             {currentStep.kind === "keyword" && (() => {
               const keyword = content.keywords[currentStep.index];
               const visibleHints = keyword.hints.slice(0, hintCount);
+              // 단서를 모두 본 뒤에도 떠올리지 못하면 마지막 도움으로 정답을 보여주고 따라 말하게 한다. 기록에는 도움 4단계로 남는다.
+              const answerLevel = keyword.hints.length + 1;
+              const answerShown = hintCount >= answerLevel;
+              const nextHelp = () => setHintCount((value) => Math.min(value + 1, answerLevel));
+              const helpLabel = hintCount === keyword.hints.length ? "정답 보기" : "도움이 필요해요";
               return (
                 <>
                   <StepLabel>핵심어 인출 · {roleLabels[keyword.role] ?? "핵심어"}</StepLabel>
                   <h1 className="mt-7 break-keep text-3xl font-bold">{keyword.question}</h1>
                   <p className="mt-4 break-keep text-lg leading-8 text-[var(--muted)]">그림을 보고 천천히 말해보세요.</p>
                   {visibleHints.length > 0 && <div className="mt-6 space-y-2 rounded-2xl bg-[#f2eee5] p-5">{visibleHints.map((hint) => <p key={hint} className="break-keep font-bold text-[#5f6764]">{hint}</p>)}</div>}
+                  {answerShown && <div className="mt-4 rounded-2xl border-2 border-[#83c6a9] bg-[#f1fbf6] p-5 text-center"><p className="text-sm font-bold text-[var(--mint-700)]">정답을 알려드려요</p><p className="mt-2 break-keep text-4xl font-bold">{keyword.answer}</p><p className="mt-2 break-keep text-lg text-[var(--muted)]">소리 내어 따라 말해보세요.</p></div>}
                   {!awaitingConfirmation && speechEnabled ? (
                     <>
                       <SpeechCapture
@@ -408,19 +414,19 @@ export default function TrainingPage() {
                         targets={[keyword.answer]}
                         variant="keyword"
                         disabled={savingAttempt || stepSettling}
-                        canHelp={hintCount < keyword.hints.length}
+                        canHelp={!answerShown}
                         onSave={(success, record) => confirmKeyword(keyword, success, record)}
                         onManual={goToManual}
                         onOtherPerson={handOverToOtherPerson}
-                        onHelp={() => { clearSpeech(); setHintCount((value) => Math.min(value + 1, keyword.hints.length)); }}
+                        onHelp={() => { clearSpeech(); nextHelp(); }}
                       />
-                      {speech.status === "idle" && <div className="mt-7 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={hintCount >= keyword.hints.length || savingAttempt || stepSettling} onClick={() => setHintCount((value) => Math.min(value + 1, keyword.hints.length))}><HelpCircle size={18} /> 도움이 필요해요</button></div>}
+                      {speech.status === "idle" && <div className="mt-7 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={answerShown || savingAttempt || stepSettling} onClick={nextHelp}><HelpCircle size={18} /> {helpLabel}</button></div>}
                     </>
                   ) : !awaitingConfirmation ? (
                     <>
                       <button className="mx-auto mt-8 flex size-28 items-center justify-center rounded-full bg-[#2c9a83] text-white shadow-sm" aria-label="말했어요" disabled={savingAttempt || stepSettling} onClick={() => setAwaitingConfirmation(true)}><Mic size={43} /></button>
                       <p className="mt-3 text-center font-bold">말했어요</p>
-                      <div className="mt-7 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={hintCount >= keyword.hints.length || savingAttempt || stepSettling} onClick={() => setHintCount((value) => Math.min(value + 1, keyword.hints.length))}><HelpCircle size={18} /> 도움이 필요해요</button></div>
+                      <div className="mt-7 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={answerShown || savingAttempt || stepSettling} onClick={nextHelp}><HelpCircle size={18} /> {helpLabel}</button></div>
                     </>
                   ) : (
                     <ManualConfirmation source={verificationSource} saving={savingAttempt} onSuccess={() => confirmKeyword(keyword, true)} onRetry={() => confirmKeyword(keyword, false)} />
