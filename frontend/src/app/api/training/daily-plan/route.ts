@@ -4,6 +4,7 @@ import { isDemoPatientEmail } from "@/lib/auth/account-rules";
 import { buildD1DailyPlan } from "@/lib/training/daily-plan";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getKstDateKey } from "@/lib/training/record-summary";
 
 type ContentRow = {
   id: string;
@@ -16,10 +17,6 @@ type ContentRow = {
   grammar_targets: TrainingContent["grammar"];
   status: ContentStatus;
 };
-
-function getKoreanToday() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
-}
 
 async function readPlanItems(admin: ReturnType<typeof createAdminClient>, planId: string) {
   const { data, error } = await admin
@@ -60,7 +57,7 @@ export async function POST() {
   }
 
   const admin = createAdminClient();
-  const today = getKoreanToday();
+  const today = getKstDateKey(new Date());
   const canReplay = isDemoPatientEmail(user.email);
   const { data: existingPlan, error: existingPlanError } = await admin
     .from("daily_plans")

@@ -128,11 +128,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm font-bold text-[var(--mint-700)]">
-            <Link href="/?role=therapist">재활사 로그인</Link>
-            <span>·</span>
             <Link href="/signup/therapist">재활사 회원가입</Link>
-            <span>·</span>
-            <Link href="/?role=admin">관리자</Link>
           </div>
         </section>
       </main>

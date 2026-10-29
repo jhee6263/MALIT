@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
 import { Brand } from "./brand";
+import { LogoutButton } from "./logout-button";
 
 export function PatientHeader({
   step,
@@ -35,9 +35,7 @@ export function PatientHeader({
             잠시 쉬기
           </Link>
         ) : (
-          <Link className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-[#67736f]" href="/">
-            <LogOut size={18} /> 나가기
-          </Link>
+          <LogoutButton className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-[#67736f]" label="나가기" />
         )}
       </div>
     </header>

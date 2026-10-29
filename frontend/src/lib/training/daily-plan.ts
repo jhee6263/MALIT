@@ -17,6 +17,8 @@ export function buildD1DailyPlan(contents: TrainingContent[], input: PlanInput) 
   const candidates = contents.filter(
     (content) =>
       content.status === "published" &&
+      content.keywords.length > 0 &&
+      content.grammar.length > 0 &&
       content.level === input.level &&
       input.topics.includes(content.topic) &&
       !input.excludedTopics.includes(content.topic),

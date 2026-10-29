@@ -7,6 +7,7 @@ const protectedRoutes = [
   { prefix: "/therapist", role: "therapist" },
   { prefix: "/patient", role: "patient" },
 ] as const;
+const homeByRole = { admin: "/admin", therapist: "/therapist", patient: "/patient/today" } as const;
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -28,12 +29,22 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const route = protectedRoutes.find(({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  if (!route) return response;
+  if (!route && pathname !== "/") return response;
 
-  // 로그인하지 않았거나, 역할이 다르거나, 승인 대기·정지 상태면 로그인 화면으로 보낸다.
   const profile = user
     ? (await supabase.from("profiles").select("role,status").eq("id", user.id).single()).data
     : null;
+
+  // 이미 로그인한 사용자가 로그인 화면(/)을 열면 자기 포털로 보낸다.
+  if (!route) {
+    const home = profile?.status === "active" ? homeByRole[profile.role as keyof typeof homeByRole] : undefined;
+    if (!home) return response;
+    const redirect = NextResponse.redirect(new URL(home, request.url));
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  }
+
+  // 로그인하지 않았거나, 역할이 다르거나, 승인 대기·정지 상태면 로그인 화면으로 보낸다.
   if (profile?.role !== route.role || profile.status !== "active") {
     const redirect = NextResponse.redirect(new URL("/", request.url));
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));

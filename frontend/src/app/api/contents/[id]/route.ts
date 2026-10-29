@@ -23,12 +23,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!parsed.success) return NextResponse.json({ error: "수정할 내용을 확인해주세요." }, { status: 400 });
   const { id } = await params;
   const admin = createAdminClient();
-  const { data: current, error: readError } = await admin.from("training_contents").select("image_path").eq("id", id).single();
+  const { data: current, error: readError } = await admin.from("training_contents").select("image_path,keywords,grammar_targets").eq("id", id).single();
   if (readError) return NextResponse.json({ error: "콘텐츠를 찾을 수 없습니다." }, { status: 404 });
 
   const effectiveImagePath = parsed.data.imagePath === undefined ? current.image_path : parsed.data.imagePath;
   if (parsed.data.status === "published" && !effectiveImagePath) {
     return NextResponse.json({ error: "훈련 이미지를 등록한 뒤 게시할 수 있습니다." }, { status: 400 });
+  }
+  // 핵심어나 문법 목표가 비어 있으면 환자 훈련 화면이 단계 없이 진행되므로 게시하지 않는다.
+  const hasSteps = Array.isArray(current.keywords) && current.keywords.length > 0 && Array.isArray(current.grammar_targets) && current.grammar_targets.length > 0;
+  if (parsed.data.status === "published" && !hasSteps) {
+    return NextResponse.json({ error: "핵심어와 문법 목표가 입력된 콘텐츠만 게시할 수 있습니다." }, { status: 400 });
   }
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
