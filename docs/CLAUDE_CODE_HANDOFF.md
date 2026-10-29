@@ -536,6 +536,7 @@ session_id + content_id + step
 8. `202610280001_add_location_keywords.sql`
 9. `202610280002_add_indexes.sql`
 10. `202610290001_add_voice_consent.sql`
+11. `202610290002_fix_first_sound_hints.sql`
 
 이미 실행한 마이그레이션은 직접 수정하지 않는다. 스키마 변경은 새 날짜의 마이그레이션으로 추가한다.
 

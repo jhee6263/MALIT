@@ -39,8 +39,9 @@ Supabase **SQL Editor**에서 `supabase/migrations/`의 파일을 **아래 순�
 8. `202610280001_add_location_keywords.sql` (L3 콘텐츠 6개에 장소 핵심어 추가)
 9. `202610280002_add_indexes.sql`
 10. `202610290001_add_voice_consent.sql` (음성인식 동의 컬럼. 코드보다 **먼저** 실행)
+11. `202610290002_fix_first_sound_hints.sql` (첫소리 단서 문구 "예요"→"이에요" 교정)
 
-> 개발 DB에도 7~10번을 실행했는지 확인한다.
+> 개발 DB에도 7~11번을 실행했는지 확인한다.
 
 ## 3. 훈련 이미지 업로드 (로컬에서 1회)
 
