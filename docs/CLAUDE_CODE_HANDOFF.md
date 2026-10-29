@@ -480,6 +480,8 @@ session_id + content_id + step
 
 - Supabase 대시보드에서 공개 회원가입(Allow new users to sign up)을 끄는 것을 권장. 모든 계정은 서버 API로 만든다.
 - 정지·반려 시 이미 로그인된 세션은 즉시 끊기지 않지만, proxy와 RLS에서 접근이 차단된다.
+- 환자 계정 관리(재활사, `POST /api/patients/[id]/account`): 비밀번호 설정·초기값 복구, 정지·재개, 담당 해제. 모두 담당 환자에게만 가능하고 감사 기록을 남긴다. 정지는 profiles 상태와 Supabase 인증의 ban을 함께 적용한다. 로그인 화면에 공개된 확인용 환자(`patient01`)는 모든 동작이 막힌다.
+- 담당이 해제된 환자는 관리자가 `/admin/users`에서 재활사를 다시 배정한다(`POST /api/admin/patients/[id]/link`).
 - 재활사 가입 폼의 비밀번호 기본값 `00000000`은 테스트 편의용. 실제 운영 전 제거.
 
 자동 브라우저 점검 결과 (2026-09-30, Playwright · 테스트 계정 therapist01 / patient02):

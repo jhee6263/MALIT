@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Settings2, UserRoundPlus, UsersRound } from "lucide-react";
 import { EmptyState } from "@/components/portal/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { isDemoPatientLoginId } from "@/lib/auth/account-rules";
+import { AccountDialog } from "./account-dialog";
+
+const statusLabel: Record<string, string> = { active: "활성", suspended: "이용 정지", pending: "대기", rejected: "반려" };
 
 export default async function PatientsPage() {
   const supabase = await createClient();
@@ -74,11 +78,14 @@ export default async function PatientsPage() {
                           : "미설정"}
                       </td>
                       <td>{setting ? `${setting.daily_count}문장` : "미설정"}</td>
-                      <td>{patient.status === "active" ? "활성" : patient.status}</td>
+                      <td><span className={`pill ${patient.status === "active" ? "pill-green" : "pill-orange"}`}>{statusLabel[patient.status] ?? patient.status}</span></td>
                       <td>
-                        <Link className="btn btn-secondary min-h-10 px-3" href={`/therapist/patients/${patient.id}/settings`}>
-                          <Settings2 size={17} /> 설정 변경
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          <Link className="btn btn-secondary min-h-10 px-3" href={`/therapist/patients/${patient.id}/settings`}>
+                            <Settings2 size={17} /> 설정 변경
+                          </Link>
+                          <AccountDialog patientId={patient.id} name={patient.name} loginId={patient.login_id ?? ""} status={patient.status} locked={isDemoPatientLoginId(patient.login_id)} />
+                        </div>
                       </td>
                     </tr>
                   );

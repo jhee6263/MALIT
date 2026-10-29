@@ -21,3 +21,26 @@ export const DEMO_PATIENT_LOGIN_ID = "patient01";
 export function isDemoPatientEmail(email?: string | null) {
   return email === toPatientInternalEmail(DEMO_PATIENT_LOGIN_ID);
 }
+
+export function isDemoPatientLoginId(loginId?: string | null) {
+  return normalizePatientLoginId(loginId ?? "") === DEMO_PATIENT_LOGIN_ID;
+}
+
+// 재활사가 담당 환자에게 쓸 수 있는 계정 관리 동작.
+export type PatientAccountAction = "set_password" | "reset_password" | "suspend" | "resume" | "unlink";
+export const PATIENT_PASSWORD_MIN_LENGTH = 8;
+
+/**
+ * 계정 상태와 대상에 따라 동작을 허용하는지 판단한다. 허용하지 않으면 안내할 이유를 돌려준다.
+ * 로그인 화면에 공개된 확인용 환자는 자소서 등에서 쓰이므로 어떤 동작도 막는다.
+ */
+export function checkPatientAccountAction(
+  action: PatientAccountAction,
+  patient: { status: string; loginId?: string | null },
+): string | null {
+  if (isDemoPatientLoginId(patient.loginId)) return "로그인 화면에 공개된 확인용 계정은 변경할 수 없습니다.";
+  if (action === "suspend" && patient.status !== "active") return "이용 중인 계정만 정지할 수 있습니다.";
+  if (action === "resume" && patient.status !== "suspended") return "정지된 계정만 다시 사용할 수 있습니다.";
+  if (action !== "resume" && action !== "unlink" && patient.status === "suspended") return "정지된 계정입니다. 먼저 다시 사용 상태로 바꿔주세요.";
+  return null;
+}
