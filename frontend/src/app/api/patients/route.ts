@@ -21,6 +21,7 @@ const schema = z.object({
   level: z.coerce.number().int().min(1).max(3),
   dailyCount: z.coerce.number().int().min(1).max(20),
   topics: z.array(z.string().trim().min(1)).min(1),
+  voiceConsent: z.boolean().default(false),
 });
 
 export async function POST(request: Request) {
@@ -128,6 +129,9 @@ export async function POST(request: Request) {
         daily_count: body.dailyCount,
         topics: uniqueTopics,
         updated_by: user.id,
+        voice_consent: body.voiceConsent,
+        voice_consent_at: body.voiceConsent ? new Date().toISOString() : null,
+        voice_consent_by: body.voiceConsent ? user.id : null,
       });
 
   if (linkError || settingsError) {

@@ -36,8 +36,11 @@ Supabase **SQL Editor**에서 `supabase/migrations/`의 파일을 **아래 순�
 5. `202609290001_normalize_grammar_targets.sql`
 6. `202609290002_attempt_details.sql`
 7. `202609300001_account_security_hardening.sql`
+8. `202610280001_add_location_keywords.sql` (L3 콘텐츠 6개에 장소 핵심어 추가)
+9. `202610280002_add_indexes.sql`
+10. `202610290001_add_voice_consent.sql` (음성인식 동의 컬럼. 코드보다 **먼저** 실행)
 
-> 개발 DB에도 7번(`202609300001`)을 실행했는지 확인한다.
+> 개발 DB에도 7~10번을 실행했는지 확인한다.
 
 ## 3. 훈련 이미지 업로드 (로컬에서 1회)
 

@@ -11,6 +11,7 @@ import {
   type StepStat,
   type TrendDirection,
 } from "@/lib/training/record-summary";
+import { summarizeSpeechAgreement, type SpeechAgreement } from "@/lib/training/speech-match";
 
 export type TrainingRecord = AttemptRow & { afterRetry: boolean };
 
@@ -72,6 +73,33 @@ function getResult(record: TrainingRecord) {
   return { label: "도움 없이 성공", tone: "success" as const };
 }
 
+function SpeechCell({ record }: { record: TrainingRecord }) {
+  const speech = record.response_data?.speech;
+  if (!speech) return <span className="text-[var(--muted)]">–</span>;
+  if (speech.disputed) {
+    return <span className="text-[#8a5a18]">“{speech.transcript || "…"}” <span className="whitespace-nowrap font-bold">앱이 잘못 들음</span></span>;
+  }
+  if (speech.unclear || !speech.transcript || speech.match === "unclear") {
+    return <span className="whitespace-nowrap text-[var(--muted)]">인식 어려움</span>;
+  }
+  // 인식된 말이 목표와 달라 보이는데 성공으로 확인했거나, 목표와 같게 들렸는데 실패로 확인한 경우는 눈에 띄게 표시한다.
+  const differs = (speech.match === "mismatch" && record.success) || (speech.match === "match" && !record.success);
+  return (
+    <span>
+      “{speech.transcript}”
+      {speech.match === "mismatch" && <span className="ml-1.5 whitespace-nowrap rounded-full bg-[#fff1d9] px-2 py-0.5 text-xs font-bold text-[#8a5a18]">목표와 다르게 들림</span>}
+      {speech.match === "partial" && <span className="ml-1.5 whitespace-nowrap rounded-full bg-[#f1f5f3] px-2 py-0.5 text-xs font-bold text-[#61706b]">일부 비슷함</span>}
+      {differs && <span className="ml-1.5 whitespace-nowrap text-xs font-bold text-[#a44343]">사람 판정과 다름</span>}
+    </span>
+  );
+}
+
+function agreementOf(group: RecordGroup): SpeechAgreement {
+  return summarizeSpeechAgreement(
+    group.dates.flatMap((date) => date.records.map((record) => ({ success: record.success, speech: record.response_data?.speech }))),
+  );
+}
+
 export function RecordsAccordion({ groups, initialOpenPatientId = null }: { groups: RecordGroup[]; initialOpenPatientId?: string | null }) {
   const [openPatients, setOpenPatients] = useState<Record<string, boolean>>(initialOpenPatientId ? { [initialOpenPatientId]: true } : {});
   const [openDates, setOpenDates] = useState<Record<string, string | null>>({});
@@ -111,7 +139,7 @@ export function RecordsAccordion({ groups, initialOpenPatientId = null }: { grou
             <div id={patientPanelId} className={`grid transition-[grid-template-rows] duration-200 ${patientOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
               <div className="overflow-hidden">
                 <div className="space-y-4 bg-[#fbfcfb] p-4 sm:p-6">
-                  <PatientOverview summary={summary} />
+                  <PatientOverview summary={summary} agreement={agreementOf(group)} />
 
                   <h3 className="flex items-center gap-2 pt-2 text-base font-bold"><CalendarDays size={18} className="text-[var(--mint-700)]" />날짜별 상세 기록</h3>
                   {group.dates.map((date) => {
@@ -140,7 +168,7 @@ export function RecordsAccordion({ groups, initialOpenPatientId = null }: { grou
                           <div className="overflow-hidden">
                             <div className="table-wrap">
                               <table>
-                                <thead><tr><th>시간</th><th>훈련 단계</th><th>연습한 말</th><th>도움 사용</th><th>수행 결과</th><th>확인 방식</th></tr></thead>
+                                <thead><tr><th>시간</th><th>훈련 단계</th><th>연습한 말</th><th>도움 사용</th><th>수행 결과</th><th>확인 방식</th><th>음성인식</th></tr></thead>
                                 <tbody>
                                   {date.records.map((record) => {
                                     const resultInfo = getResult(record);
@@ -153,6 +181,7 @@ export function RecordsAccordion({ groups, initialOpenPatientId = null }: { grou
                                         <td><span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${usedHelp ? "font-bold text-[#9a641d]" : "text-[var(--muted)]"}`}><HelpCircle size={16} />{getHelpLabel(record)}</span></td>
                                         <td><ResultBadge label={resultInfo.label} tone={resultInfo.tone} /></td>
                                         <td className="whitespace-nowrap">{sourceLabels[record.judgment_source] ?? record.judgment_source}</td>
+                                        <td className="min-w-40"><SpeechCell record={record} /></td>
                                       </tr>
                                     );
                                   })}
@@ -174,7 +203,7 @@ export function RecordsAccordion({ groups, initialOpenPatientId = null }: { grou
   );
 }
 
-function PatientOverview({ summary }: { summary: PatientSummary }) {
+function PatientOverview({ summary, agreement }: { summary: PatientSummary; agreement: SpeechAgreement }) {
   const change = summary.recentChange;
   const headlineStyles = {
     focus: { box: "border-[#ead9bd] bg-[#fffaf0]", icon: "bg-[#fff0d6] text-[#98611a]", title: "조금 더 살펴볼 부분", Icon: HelpCircle },
@@ -287,6 +316,13 @@ function PatientOverview({ summary }: { summary: PatientSummary }) {
               </div>
               {isMostlySelfChecked(summary) && (
                 <p className="mt-3 break-keep text-sm leading-6 text-[#8a5a18]">본인 확인 기록이 절반 이상입니다. 재활사·보호자 확인 기록과 함께 해석해주세요.</p>
+              )}
+              {agreement.attempts > 0 && (
+                <p className="mt-3 break-keep text-sm leading-6 text-[var(--muted)]">
+                  음성인식 {agreement.attempts}건 중 글자로 확인된 {agreement.comparable}건에서 사람 판정과 달랐던 기록은 {agreement.disagreed}건
+                  {agreement.comparable > 0 ? `(${Math.round((agreement.disagreed / agreement.comparable) * 100)}%)` : ""}입니다.
+                  앱이 잘 못 들었다고 한 기록 {agreement.disputed}건, 인식이 어려워 직접 확인한 기록 {agreement.unclear}건은 제외했습니다. 음성인식은 참고용이며 판정은 확인한 사람의 선택입니다.
+                </p>
               )}
             </section>
           )}

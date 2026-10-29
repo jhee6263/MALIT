@@ -8,6 +8,8 @@ const settingsSchema = z.object({
   level: z.coerce.number().int().min(1).max(3),
   dailyCount: z.coerce.number().int().min(1).max(20),
   topics: z.array(z.string().trim().min(1)).min(1),
+  // 보내지 않으면 기존 동의 상태를 그대로 둔다.
+  voiceConsent: z.boolean().optional(),
 });
 
 async function authorizeTherapist(patientId: string) {
@@ -60,7 +62,7 @@ export async function GET(
     supabase.from("profiles").select("id,name,login_id").eq("id", id).single(),
     supabase
       .from("learner_settings")
-      .select("training_level,daily_count,topics")
+      .select("training_level,daily_count,topics,voice_consent")
       .eq("patient_id", id)
       .single(),
   ]);
@@ -89,7 +91,7 @@ export async function PATCH(
     return NextResponse.json({ error: "훈련 설정을 확인해주세요." }, { status: 400 });
   }
 
-  const { level, dailyCount, topics } = parsed.data;
+  const { level, dailyCount, topics, voiceConsent } = parsed.data;
   const uniqueTopics = [...new Set(topics)];
   const admin = createAdminClient();
   const { data: activeTopics, error: topicError } = await admin
@@ -102,6 +104,11 @@ export async function PATCH(
     return NextResponse.json({ error: "현재 사용할 수 있는 훈련 주제만 선택해주세요." }, { status: 400 });
   }
 
+  // 동의 상태가 바뀔 때만 동의 시각과 기록자를 새로 남긴다.
+  const { data: before } = await admin.from("learner_settings").select("voice_consent").eq("patient_id", id).maybeSingle();
+  const consentChanged = voiceConsent !== undefined && voiceConsent !== (before?.voice_consent ?? false);
+  const now = new Date().toISOString();
+
   const { data, error } = await admin
     .from("learner_settings")
     .update({
@@ -109,10 +116,17 @@ export async function PATCH(
       daily_count: dailyCount,
       topics: uniqueTopics,
       updated_by: authorization.user.id,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
+      ...(consentChanged
+        ? {
+            voice_consent: voiceConsent,
+            voice_consent_at: voiceConsent ? now : null,
+            voice_consent_by: voiceConsent ? authorization.user.id : null,
+          }
+        : {}),
     })
     .eq("patient_id", id)
-    .select("training_level,daily_count,topics")
+    .select("training_level,daily_count,topics,voice_consent")
     .single();
 
   if (error) {
@@ -124,7 +138,12 @@ export async function PATCH(
     action: "learner_settings_updated",
     target_type: "profile",
     target_id: id,
-    detail: { training_level: level, daily_count: dailyCount, topics: uniqueTopics },
+    detail: {
+      training_level: level,
+      daily_count: dailyCount,
+      topics: uniqueTopics,
+      ...(consentChanged ? { voice_consent: voiceConsent } : {}),
+    },
   });
 
   return NextResponse.json(data);

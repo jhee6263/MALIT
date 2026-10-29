@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-
-function getKoreanToday() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
-}
+import { getKstDateKey } from "@/lib/training/record-summary";
 
 function normalizeGrammarTargets(value: unknown) {
   if (!Array.isArray(value)) return [];
@@ -63,7 +60,7 @@ export async function GET() {
     .from("daily_plans")
     .select("id,reason")
     .eq("patient_id", user.id)
-    .eq("plan_date", getKoreanToday())
+    .eq("plan_date", getKstDateKey(new Date()))
     .maybeSingle();
   if (planError) return NextResponse.json({ error: "오늘의 훈련을 불러오지 못했습니다." }, { status: 500 });
   if (!plan) return NextResponse.json({ error: "오늘 생성된 훈련이 없습니다." }, { status: 404 });
@@ -79,7 +76,7 @@ export async function GET() {
   const contentIds = planItems.map((item) => item.content_id);
   const { data: contents, error: contentError } = await admin
     .from("training_contents")
-    .select("id,title,level,topic_id,image_path,image_alt,target_sentence,sentence_structure,keywords,grammar_targets")
+    .select("id,title,level,topic_id,image_path,image_alt,target_sentence,accepted_expressions,sentence_structure,keywords,grammar_targets")
     .in("id", contentIds);
   if (contentError) return NextResponse.json({ error: "훈련 콘텐츠를 불러오지 못했습니다." }, { status: 500 });
 
@@ -109,6 +106,7 @@ export async function GET() {
         imageUrl,
         imageAlt: content.image_alt,
         targetSentence: content.target_sentence,
+        acceptedExpressions: Array.isArray(content.accepted_expressions) ? content.accepted_expressions : [],
         sentenceStructure: content.sentence_structure ?? [],
         keywords: content.keywords ?? [],
         grammarTargets: normalizeGrammarTargets(content.grammar_targets),
@@ -116,5 +114,17 @@ export async function GET() {
     }];
   });
 
-  return NextResponse.json({ plan: { id: plan.id, reason: plan.reason }, items });
+  // 음성인식 동의와 반응 대기 시간. 컬럼이 아직 없는 DB에서는 오류를 무시하고 음성인식을 끈 채로 훈련한다.
+  const { data: learnerSettings } = await admin
+    .from("learner_settings")
+    .select("voice_consent,wait_seconds")
+    .eq("patient_id", user.id)
+    .maybeSingle();
+
+  return NextResponse.json({
+    plan: { id: plan.id, reason: plan.reason },
+    items,
+    voiceConsent: learnerSettings?.voice_consent === true,
+    waitSeconds: learnerSettings?.wait_seconds ?? 8,
+  });
 }

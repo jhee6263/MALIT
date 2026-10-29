@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test src/lib/training/*.test.ts",
     "upload:training-images": "node --env-file=.env scripts/upload-training-images.mjs",
     "upload:training-images:prod": "node --env-file=.env.prod scripts/upload-training-images.mjs"
   },

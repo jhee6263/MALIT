@@ -5,14 +5,14 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Save } from "lucide-react";
 
-type SettingsForm = { level: string; dailyCount: string; topics: string[] };
+type SettingsForm = { level: string; dailyCount: string; topics: string[]; voiceConsent: boolean };
 
 export default function PatientSettingsPage() {
   const params = useParams<{ id: string }>();
   const patientId = params.id;
   const [patientName, setPatientName] = useState("");
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
-  const [form, setForm] = useState<SettingsForm>({ level: "1", dailyCount: "6", topics: [] });
+  const [form, setForm] = useState<SettingsForm>({ level: "1", dailyCount: "6", topics: [], voiceConsent: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +35,7 @@ export default function PatientSettingsPage() {
           level: String(settingsBody.settings.training_level),
           dailyCount: String(settingsBody.settings.daily_count),
           topics: topicsResponse.ok ? storedTopics.filter((topic) => activeTopics.includes(topic)) : storedTopics,
+          voiceConsent: Boolean(settingsBody.settings.voice_consent),
         });
         setAvailableTopics(activeTopics);
       })
@@ -116,6 +117,13 @@ export default function PatientSettingsPage() {
               ))}
             </div>
           </fieldset>
+          <label className="sm:col-span-2 flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-white p-4">
+            <input type="checkbox" className="mt-1" checked={form.voiceConsent} onChange={(event) => setForm({ ...form, voiceConsent: event.target.checked })} />
+            <span>
+              <span className="block font-bold">음성인식 사용에 동의했어요</span>
+              <span className="mt-1 block text-sm leading-6 text-[var(--muted)]">환자 또는 보호자에게 안내하고 동의를 받은 경우에만 체크하세요. 말소리는 브라우저 제공사(예: Google)로 전송되어 글자로 바뀌며, 말이음은 음성 파일을 저장하지 않습니다. 인식 결과는 참고용이고 맞고 틀림은 사람이 확인합니다. 체크를 해제하면 지금처럼 직접 확인하는 화면이 나옵니다. 이 설정은 다음 훈련 시작부터 적용됩니다.</span>
+            </span>
+          </label>
           <p className="sm:col-span-2 rounded-xl bg-[#fff9f3] p-4 text-sm leading-6 text-[#74553b]">변경한 설정은 다음에 새로 생성되는 훈련부터 적용됩니다. 이미 시작했거나 생성된 오늘의 훈련은 그대로 유지됩니다.</p>
           <div className="flex flex-wrap justify-end gap-3 sm:col-span-2">
             <Link href="/therapist/patients" className="btn btn-secondary">취소</Link>

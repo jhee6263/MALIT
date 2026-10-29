@@ -11,8 +11,12 @@ const schema = z.object({
   target: z.string().min(1).max(300),
   hintLevel: z.number().int().min(0).max(10),
   success: z.boolean(),
-  source: z.enum(["self", "companion", "therapist", "demo"]),
+  // 화면에서 선택할 수 있는 확인 주체만 받는다. "demo"·"stt"는 서버가 직접 기록할 때만 쓴다.
+  source: z.enum(["self", "companion", "therapist"]),
   responseMs: z.number().int().min(0).max(3_600_000).optional(),
+  // 음성인식으로 들린 말. 판정 주체(source)는 그대로 확인한 사람이고, 인식 결과는 참고용으로만 저장한다.
+  transcript: z.string().trim().max(500).optional(),
+  sttConfidence: z.number().min(0).max(1).optional(),
   responseData: z.record(z.string(), z.unknown()).default({}),
   hints: z.array(z.object({ type: z.string().min(1).max(80), level: z.number().int().min(1).max(10) })).max(10).default([]),
 });
@@ -71,6 +75,9 @@ export async function POST(request: Request) {
       judgment_source: body.source,
       response_ms: body.responseMs,
       response_data: body.responseData,
+      transcript: body.transcript || null,
+      // numeric(4,3)이라 소수 셋째 자리까지만 저장한다.
+      stt_confidence: body.sttConfidence === undefined ? null : Math.round(body.sttConfidence * 1000) / 1000,
     })
     .select("id")
     .single();

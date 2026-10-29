@@ -7,6 +7,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, HelpCircle, LoaderCircle, Mic, RotateCcw, Stethoscope, UserRound, UsersRound } from "lucide-react";
 import { Footer } from "@/components/footer";
 import { PatientHeader } from "@/components/patient-header";
+import { SpeechCapture } from "@/components/speech-capture";
+import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
+import type { SpeechRecord } from "@/lib/training/speech-match";
 
 type Keyword = { role: string; question: string; answer: string; hints: string[] };
 type GrammarChoice = { value: string; preview: string };
@@ -24,6 +27,7 @@ type TrainingItem = {
     imageUrl: string | null;
     imageAlt: string;
     targetSentence: string;
+    acceptedExpressions: string[];
     sentenceStructure: SentencePart[];
     keywords: Keyword[];
     grammarTargets: GrammarTarget[];
@@ -70,6 +74,13 @@ export default function TrainingPage() {
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  // 음성인식은 환자(보호자)가 동의했고 브라우저가 지원할 때만 쓴다. 아니면 지금처럼 직접 확인한다.
+  const [voiceConsent, setVoiceConsent] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(8);
+  const speech = useSpeechRecognition({ waitSeconds });
+  const speechEnabled = voiceConsent && speech.supported;
+  // 인식 결과를 확인한 뒤 직접 확인 화면으로 넘어온 경우, 그 인식 정보를 기록에 함께 남긴다.
+  const [speechRecord, setSpeechRecord] = useState<SpeechRecord | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,6 +97,8 @@ export default function TrainingPage() {
         const sessionBody = await sessionResponse.json();
         if (!sessionResponse.ok) throw new Error(sessionBody.error ?? "훈련을 시작하지 못했습니다.");
         setItems(planBody.items);
+        setVoiceConsent(planBody.voiceConsent === true);
+        setWaitSeconds(typeof planBody.waitSeconds === "number" ? planBody.waitSeconds : 8);
         setSessionId(sessionBody.id);
         setCurrentItemIndex(Math.min(sessionBody.sentence_count ?? 0, Math.max(planBody.items.length - 1, 0)));
         const savedSource = window.sessionStorage.getItem(`malium-verification-${sessionBody.id}`);
@@ -125,7 +138,25 @@ export default function TrainingPage() {
     if (settleTimer.current) clearTimeout(settleTimer.current);
   }, []);
 
+  function clearSpeech() {
+    speech.reset();
+    setSpeechRecord(null);
+  }
+
+  // 인식 결과를 보고 직접 확인 화면으로 넘어간다.
+  function goToManual(record: SpeechRecord) {
+    setSpeechRecord(record);
+    setAwaitingConfirmation(true);
+  }
+
+  // 다른 사람이 확인하려면 확인 주체를 다시 고른다. 고른 뒤에는 같은 단계의 직접 확인 화면으로 돌아온다.
+  function handOverToOtherPerson(record: SpeechRecord) {
+    goToManual(record);
+    setVerificationSource(null);
+  }
+
   function moveToNextStep() {
+    clearSpeech();
     settleStep();
     setHintCount(0);
     setSelectedChoice("");
@@ -147,6 +178,7 @@ export default function TrainingPage() {
     success,
     responseData,
     hints = [],
+    speech: speechInfo = null,
   }: {
     step: string;
     target: string;
@@ -154,6 +186,7 @@ export default function TrainingPage() {
     success: boolean;
     responseData: Record<string, unknown>;
     hints?: HintRecord[];
+    speech?: SpeechRecord | null;
   }) {
     if (!verificationSource || !sessionId || !currentItem || requestInFlight.current) return false;
     requestInFlight.current = true;
@@ -167,8 +200,11 @@ export default function TrainingPage() {
       hintLevel,
       success,
       source: verificationSource,
-      responseData,
+      responseData: speechInfo ? { ...responseData, speech: speechInfo } : responseData,
       hints,
+      ...(speechInfo?.transcript ? { transcript: speechInfo.transcript } : {}),
+      ...(speechInfo?.confidence != null ? { sttConfidence: speechInfo.confidence } : {}),
+      ...(speechInfo?.firstSpeechMs != null ? { responseMs: speechInfo.firstSpeechMs } : {}),
     };
     const key = JSON.stringify(payload);
     if (pendingEvent.current?.key !== key) pendingEvent.current = { key, id: crypto.randomUUID() };
@@ -199,7 +235,7 @@ export default function TrainingPage() {
     return Array.from({ length: count }, (_, index) => ({ type: types[index] ?? "additional", level: index + 1 }));
   }
 
-  async function confirmKeyword(keyword: Keyword, success: boolean) {
+  async function confirmKeyword(keyword: Keyword, success: boolean, record: SpeechRecord | null = speechRecord) {
     const saved = await saveAttempt({
       step: `keyword:${keyword.role}`,
       target: keyword.answer,
@@ -207,10 +243,12 @@ export default function TrainingPage() {
       success,
       responseData: { question: keyword.question, confirmation: success ? "success" : "retry" },
       hints: keywordHintRecords(hintCount),
+      speech: record,
     });
     if (!saved) return;
     setAwaitingConfirmation(false);
     if (success) moveToNextStep();
+    else clearSpeech();
   }
 
   function selectGrammarChoice(choice: string) {
@@ -236,7 +274,7 @@ export default function TrainingPage() {
     if (saved) moveToNextStep();
   }
 
-  async function confirmFullSentence(success: boolean) {
+  async function confirmFullSentence(success: boolean, record: SpeechRecord | null = speechRecord) {
     if (!currentItem) return;
     const saved = await saveAttempt({
       step: "sentence:full",
@@ -245,10 +283,12 @@ export default function TrainingPage() {
       success,
       responseData: { usedSentenceHelp: hintCount > 0, confirmation: success ? "success" : "retry" },
       hints: hintCount > 0 ? [{ type: "sentence_model", level: 1 }] : [],
+      speech: record,
     });
     if (!saved) return;
     setAwaitingConfirmation(false);
     if (success) await finishSentence();
+    else clearSpeech();
   }
 
   async function finishSentence() {
@@ -279,6 +319,7 @@ export default function TrainingPage() {
       router.push("/patient/result");
       return;
     }
+    clearSpeech();
     settleStep();
     setCurrentItemIndex((value) => value + 1);
     setStepIndex(0);
@@ -360,7 +401,22 @@ export default function TrainingPage() {
                   <h1 className="mt-7 break-keep text-3xl font-bold">{keyword.question}</h1>
                   <p className="mt-4 break-keep text-lg leading-8 text-[var(--muted)]">그림을 보고 천천히 말해보세요.</p>
                   {visibleHints.length > 0 && <div className="mt-6 space-y-2 rounded-2xl bg-[#f2eee5] p-5">{visibleHints.map((hint) => <p key={hint} className="break-keep font-bold text-[#5f6764]">{hint}</p>)}</div>}
-                  {!awaitingConfirmation ? (
+                  {!awaitingConfirmation && speechEnabled ? (
+                    <>
+                      <SpeechCapture
+                        speech={speech}
+                        targets={[keyword.answer]}
+                        variant="keyword"
+                        disabled={savingAttempt || stepSettling}
+                        canHelp={hintCount < keyword.hints.length}
+                        onSave={(success, record) => confirmKeyword(keyword, success, record)}
+                        onManual={goToManual}
+                        onOtherPerson={handOverToOtherPerson}
+                        onHelp={() => { clearSpeech(); setHintCount((value) => Math.min(value + 1, keyword.hints.length)); }}
+                      />
+                      {speech.status === "idle" && <div className="mt-7 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={hintCount >= keyword.hints.length || savingAttempt || stepSettling} onClick={() => setHintCount((value) => Math.min(value + 1, keyword.hints.length))}><HelpCircle size={18} /> 도움이 필요해요</button></div>}
+                    </>
+                  ) : !awaitingConfirmation ? (
                     <>
                       <button className="mx-auto mt-8 flex size-28 items-center justify-center rounded-full bg-[#2c9a83] text-white shadow-sm" aria-label="말했어요" disabled={savingAttempt || stepSettling} onClick={() => setAwaitingConfirmation(true)}><Mic size={43} /></button>
                       <p className="mt-3 text-center font-bold">말했어요</p>
@@ -418,6 +474,21 @@ export default function TrainingPage() {
                 {hintCount > 0 && <div className="mt-7 rounded-2xl bg-[#f2eee5] p-6 text-center text-2xl font-bold">{content.targetSentence}</div>}
                 {finishPending ? (
                   <button className="btn btn-primary mt-9 w-full" disabled={saving} onClick={finishSentence}>{saving ? "저장 중…" : "다시 시도하기"}</button>
+                ) : !awaitingConfirmation && speechEnabled ? (
+                  <>
+                    <SpeechCapture
+                      speech={speech}
+                      targets={[content.targetSentence, ...content.acceptedExpressions]}
+                      variant="sentence"
+                      disabled={saving || savingAttempt || stepSettling}
+                      canHelp={hintCount === 0}
+                      onSave={(success, record) => confirmFullSentence(success, record)}
+                      onManual={goToManual}
+                      onOtherPerson={handOverToOtherPerson}
+                      onHelp={() => { clearSpeech(); setHintCount(1); }}
+                    />
+                    {speech.status === "idle" && <div className="mt-4 flex justify-center"><button className="btn btn-secondary min-h-12" disabled={hintCount > 0 || savingAttempt} onClick={() => setHintCount(1)}><RotateCcw size={18} /> 문장 도움 보기</button></div>}
+                  </>
                 ) : !awaitingConfirmation ? (
                   <>
                     <button className="btn btn-primary mt-9 w-full" disabled={saving || savingAttempt || stepSettling} onClick={() => setAwaitingConfirmation(true)}>문장을 말했어요</button>

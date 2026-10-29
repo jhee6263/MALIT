@@ -3,12 +3,16 @@
 // 한 기회 = 같은 세션·콘텐츠·단계에서 성공이 나올 때까지의 연속 로그.
 // 앱 내 훈련 기록 기반 요약이며 임상 평가 지표가 아니다.
 
+import type { SpeechRecord } from "./speech-match";
+
 export type AttemptResponseData = {
   errorCount?: number;
   firstChoice?: string;
   finalChoice?: string;
   usedSentenceHelp?: boolean;
   confirmation?: "success" | "retry";
+  /** 음성인식을 켜고 시도한 경우의 인식 정보 (판정은 사람이 한다) */
+  speech?: Partial<SpeechRecord>;
 };
 
 export type AttemptRow = {

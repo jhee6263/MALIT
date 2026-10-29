@@ -532,6 +532,10 @@ session_id + content_id + step
 4. `202609280003_initial_training_content_drafts.sql`
 5. `202609290001_normalize_grammar_targets.sql`
 6. `202609290002_attempt_details.sql`
+7. `202609300001_account_security_hardening.sql`
+8. `202610280001_add_location_keywords.sql`
+9. `202610280002_add_indexes.sql`
+10. `202610290001_add_voice_consent.sql`
 
 이미 실행한 마이그레이션은 직접 수정하지 않는다. 스키마 변경은 새 날짜의 마이그레이션으로 추가한다.
 
