@@ -67,7 +67,7 @@ export function AccountDialog({ patientId, name, loginId, status, locked }: Prop
   return (
     <>
       <button type="button" className="btn btn-secondary min-h-10 px-3" onClick={open}><ShieldCheck size={17} /> 계정 관리</button>
-      <dialog ref={dialog} className="m-auto w-[min(92vw,34rem)] rounded-3xl border border-[var(--line)] p-0 shadow-2xl backdrop:bg-black/40" aria-labelledby={`account-title-${patientId}`}>
+      <dialog ref={dialog} className="m-auto w-[min(92vw,34rem)] whitespace-normal break-keep rounded-3xl border border-[var(--line)] p-0 shadow-2xl backdrop:bg-black/40" aria-labelledby={`account-title-${patientId}`}>
         <div className="p-6 sm:p-7">
           <div className="flex items-start justify-between gap-3">
             <div>
